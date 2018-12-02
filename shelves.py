@@ -2,12 +2,18 @@
 #sculpteo 940mm x 590
 
 import svgwrite
-from svgwrite import cm, mm
+
+#Adobe Illustrator
+#72 ppi, 
+mm = 72 / 25.4
 
 #manufacturer = "sculpteo"
-manufacturer = "ponoko"
+manufacturer = "ponoko_shelf_2_riser"
 node_radius_ratio = 11
 node_length = 7
+
+opening_length = 1898.65
+max_shelf = 316.65 
 
 if manufacturer == "sculpteo":
     join_width = 6.1
@@ -20,7 +26,21 @@ if manufacturer == "sculpteo":
     riser_height = 290
 
 elif manufacturer == "ponoko":
+    
+    color_width = 41
+    color_height = 96.475
+    panel_width = 791
+    panel_height = 384
+    shelf_width = 790
+    depth = 160
+    riser_depth=160
+    riser_height = 290
+
     join_width = 5.9
+    join_length = depth/2
+
+elif manufacturer == "ponoko_shelf_2_riser":
+    
     color_width = 41
     color_height = 96.475
     panel_width = 791
@@ -28,45 +48,53 @@ elif manufacturer == "ponoko":
     shelf_width = 790
     depth = 160
     riser_height = 290
+    riser_depth = (384-depth)/2
+    
+    join_width = 5.96
+    join_length = depth/2
+
    
-stroke_width="0.1"
-dwg = svgwrite.Drawing('shelf_po.svg',width="2267.718pt",height="1116.86pt",viewBox="0 0 2267.718 1116.85")
+stroke_width="0.01"
+#Ponoko P3 Template
+dwg = svgwrite.Drawing('shelf_po_v4_4.svg',size=('2267.72','1116.85'),viewBox="0 0 2267.72 1116.85",profile="tiny")
+current_group = dwg.add(dwg.g(id="Design_Template"))
+#organge 5mm border
+current_group.add(dwg.rect((0,0),(2267.72,1116.85),fill=svgwrite.rgb(246,146,30)))
+#white rect inside the orange border
+current_group.add(dwg.rect((5*mm,5*mm),(2239.37,1088.5),fill=svgwrite.rgb(255,255,255)))
 
-dwg.add(dwg.path(style="fill:#f6921e",d="m 0,-3.3410158e-4 2267.7166,0 L 2267.7166,1116.85 0,1116.85 z",id="rect21823"))
-dwg.add(dwg.path(style="fill:#ffffff",d="m 14.173228,14.172853 2239.370072,0 0,1088.503947 -2239.370072,0 z",id="rect21825"))
+#transform, #because the template uses an offset we need to offset all drawings by that amount:
+transform_x_offset = 5*mm
+transform_y_offset = 5*mm
 
-
-
-current_group = dwg.add(dwg.g(id="design", stroke=svgwrite.rgb(0, 0, 255),stroke_width=stroke_width,fill='none',transform="matrix(2.834177, 0, 0, 2.834177, 14.2, 14.2)"))
-
-
+#current_group = dwg.add(dwg.g(id="design", stroke=svgwrite.rgb(0, 0, 255),stroke_width=stroke_width,fill='none')
+current_group = dwg.add(dwg.g(id="ADD_your_design_here", stroke=svgwrite.rgb(0, 0, 255),stroke_width=stroke_width,fill='none'))
 
 def addArc(p0, p1, ratio):
     """ Adds an arc that bulges to the right as it moves from p0 to p1 """
-    args = {'x0':p0[0], 
-        'y0':p0[1], 
-        'xradius':1/ratio, 
-        'yradius':1, 
+    args = {'x0':p0[0]*mm+transform_x_offset, 
+        'y0':p0[1]*mm+transform_y_offset, 
+        'xradius':mm*1/ratio, 
+        'yradius':mm*1, 
         'ellipseRotation':0, #has no effect for circles
-        'x1':(p1[0]-p0[0]), 
-        'y1':(p1[1]-p0[1])}
+        'x1':(p1[0]-p0[0])*mm, 
+        'y1':(p1[1]-p0[1])*mm}
     current_group.add(dwg.path(d="M %(x0)f,%(y0)f a %(xradius)f,%(yradius)f %(ellipseRotation)f 0,0 %(x1)f,%(y1)f"%args,
              fill="none", 
              stroke=svgwrite.rgb(0, 0, 255), stroke_width=stroke_width
             ))
 
 def line(start,end):
-    rx1 = round(start[0],3)
-    ry1 = round(start[1],3)
-    rx2 = round(end[0],3)
-    ry2 = round(end[1],3)
-    current_group.add(dwg.line((rx1*mm, ry1*mm), (rx2*mm, ry2*mm)))
+    rx1 = round(start[0]*mm+transform_x_offset,3)
+    ry1 = round(start[1]*mm+transform_y_offset,3)
+    rx2 = round(end[0]*mm+transform_x_offset,3)
+    ry2 = round(end[1]*mm+transform_y_offset,3)
+    current_group.add(dwg.line((rx1, ry1), (rx2, ry2)))
 
 def slot(x,y,top=True):
     if top:
-        line((x-join_width/2, y), (x-join_width/2, y+depth/2))
+        line((x-join_width/2, y), (x+join_width/2, y))
     #break in 3 section
-    join_length = depth/2
 
     y1 = round(join_length / 3, 2) + y
     y2 = round(2 * join_length / 3, 2) + y
@@ -112,11 +140,11 @@ def riser(x,y,top=True,bottom=True,left=True,right=True):
     if top:
         line((x, y), (x+riser_height, y))
     if left:
-        line((x, y), (x, y+depth))
+        line((x, y), (x, y+riser_depth))
     if bottom:
-        line((x, y+depth), (x+riser_height, y+depth))
+        line((x, y+riser_depth), (x+riser_height, y+riser_depth))
     if right:
-        line((x+riser_height, y), (x+riser_height, y+depth))
+        line((x+riser_height, y), (x+riser_height, y+riser_depth))
     slot(x+128.63,y,top=False)
 
 if manufacturer  == "sculpteo":
@@ -136,6 +164,20 @@ elif manufacturer == "ponoko":
     line((0,0),(shelf_width,0))
     line((shelf_width,0),(shelf_width,2*depth))
     line((0,0),(0,2*depth))
+
+elif manufacturer == "ponoko_shelf_2_riser":
+    shelf(0,0,top=False,left=False,right=False)
+    riser(0*riser_height,depth*1,top=False,bottom=False,left=False)
+    riser(1*riser_height,depth*1,top=False,bottom=False,left=False)
+    riser(2*riser_height,depth*1,top=False,bottom=False,left=False,right=False)
+    line((0,depth+riser_depth),(shelf_width,depth+riser_depth))
+    riser(0*riser_height,depth+riser_depth,top=False,bottom=False,left=False)
+    riser(1*riser_height,depth+riser_depth,top=False,bottom=False,left=False)
+    riser(2*riser_height,depth+riser_depth,top=False,bottom=False,left=False,right=False)
+    line((0,depth+2*riser_depth),(shelf_width,depth+2*riser_depth))
+    line((0,0),(shelf_width,0))
+    line((shelf_width,0),(shelf_width,depth+2*riser_depth))
+    line((0,0),(0,depth+2*riser_depth))
 
     
 

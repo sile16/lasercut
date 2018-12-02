@@ -8,43 +8,49 @@ import svgwrite
 mm = 72 / 25.4
 
 #manufacturer = "sculpteo"
-manufacturer = "ponoko"
+manufacturer = "ponoko_shelf_2_riser"
 node_radius_ratio = 11
 node_length = 7
 
-if manufacturer == "sculpteo":
-    join_width = 6.1
-    color_width = 41
-    color_height = 96.475
-    panel_width = 940
-    panel_height = 590
-    shelf_width = 939
-    depth = 160
-    riser_height = 290
+opening_length = 1898.65
+max_shelf = 316.65 
 
-elif manufacturer == "ponoko":
+material = "ponoko_6mm_hardboard"
+#panel = "ponoko_shelf_2_riser"
+#panel = "ponoko_short_shelf_2_riser"
+panel = "ponoko_all_riser"
+
+
+if material == "ponoko_6mm_hardboard":
+    max_x = 790
+    max_y = 383
     join_width = 5.9
-    color_width = 41
-    color_height = 96.475
-    panel_width = 791
-    panel_height = 384
-    shelf_width = 790
-    depth = 160
-    riser_height = 290
-   
-stroke_width="0.01"
-dwg = svgwrite.Drawing('shelf_po_v4_3.svg',size=('2267.72','1116.85'),viewBox="0 0 2267.72 1116.85",profile="tiny")
-current_group = dwg.add(dwg.g(id="Design_Template"))
-current_group.add(dwg.rect((0,0),(2267.72,1116.85),fill=svgwrite.rgb(246,146,30)))
-current_group.add(dwg.rect((5*mm,5*mm),(2239.37,1088.5),fill=svgwrite.rgb(255,255,255)))
+    join_length = 160/2
+    #transform, #because the template uses an offset we need to offset all drawings by that amount:
+    transform_x_offset = 5*mm
+    transform_y_offset = 5*mm
 
-#current_group = dwg.add(dwg.g(id="design", stroke=svgwrite.rgb(0, 0, 255),stroke_width=stroke_width,fill='none')
-current_group = dwg.add(dwg.g(id="ADD_your_design_here", stroke=svgwrite.rgb(0, 0, 255),stroke_width=stroke_width,fill='none'))
+    stroke_width="0.01"
+    #Ponoko P3 Template
+    dwg = svgwrite.Drawing(material+panel+".svg",size=('2267.72','1116.85'),viewBox="0 0 2267.72 1116.85",profile="tiny")
+    current_group = dwg.add(dwg.g(id="Design_Template"))
+    #organge 5mm border
+    current_group.add(dwg.rect((0,0),(2267.72,1116.85),fill=svgwrite.rgb(246,146,30)))
+    #white rect inside the orange border
+    current_group.add(dwg.rect((5*mm,5*mm),(2239.37,1088.5),fill=svgwrite.rgb(255,255,255)))
+
+
+
+    #current_group = dwg.add(dwg.g(id="design", stroke=svgwrite.rgb(0, 0, 255),stroke_width=stroke_width,fill='none')
+    current_group = dwg.add(dwg.g(id="ADD_your_design_here", stroke=svgwrite.rgb(0, 0, 255),stroke_width=stroke_width,fill='none'))
+
+
+
 
 def addArc(p0, p1, ratio):
     """ Adds an arc that bulges to the right as it moves from p0 to p1 """
-    args = {'x0':p0[0]*mm+5*mm, 
-        'y0':p0[1]*mm+5*mm, 
+    args = {'x0':p0[0]*mm+transform_x_offset, 
+        'y0':p0[1]*mm+transform_y_offset, 
         'xradius':mm*1/ratio, 
         'yradius':mm*1, 
         'ellipseRotation':0, #has no effect for circles
@@ -56,17 +62,16 @@ def addArc(p0, p1, ratio):
             ))
 
 def line(start,end):
-    rx1 = round(start[0]*mm+5*mm,3)
-    ry1 = round(start[1]*mm+5*mm,3)
-    rx2 = round(end[0]*mm+5*mm,3)
-    ry2 = round(end[1]*mm+5*mm,3)
+    rx1 = round(start[0]*mm+transform_x_offset,3)
+    ry1 = round(start[1]*mm+transform_y_offset,3)
+    rx2 = round(end[0]*mm+transform_x_offset,3)
+    ry2 = round(end[1]*mm+transform_y_offset,3)
     current_group.add(dwg.line((rx1, ry1), (rx2, ry2)))
 
 def slot(x,y,top=True):
     if top:
-        line((x-join_width/2, y), (x-join_width/2, y+depth/2))
+        line((x-join_width/2, y), (x+join_width/2, y))
     #break in 3 section
-    join_length = depth/2
 
     y1 = round(join_length / 3, 2) + y
     y2 = round(2 * join_length / 3, 2) + y
@@ -93,54 +98,131 @@ def slot(x,y,top=True):
     line( (current_x, y1 - node_length/2),(current_x, y))
 
 
-def shelf(x,y,top=True,bottom=True,left=True,right=True):
+def shelf(xy,shelf_width,shelf_depth,color_width,top=True,left=True,bottom=True,right=True,new_line=False):
+    x=xy[0]
+    y=xy[1]
     if top:
         line((x, y), (x+shelf_width, y))
     if left:
-        line((x, y), (x, y+depth))
+        line((x, y), (x, y+shelf_depth))
     curr_pos=0
     for incr in range(0,int(shelf_width/(color_width+join_width))):
         curr_pos+=color_width+join_width
         slot(curr_pos,y,top=False)
     if right:
-        line((x+shelf_width, y), (x+shelf_width, y+depth))
+        line((x+shelf_width, y), (x+shelf_width, y+shelf_depth))
     if bottom:
-        line((x+shelf_width, y+depth), (x, y+depth))
+        line((x+shelf_width, y+shelf_depth), (x, y+shelf_depth))
+    if new_line:
+        return (0,y+shelf_depth)
+    else:
+        return (x+shelf_width,y)
+
     
     
-def riser(x,y,top=True,bottom=True,left=True,right=True):
+def riser(xy,riser_height,riser_depth,top=True,bottom=True,left=True,right=True,new_line=False):
+    x=xy[0]
+    y=xy[1]
     if top:
         line((x, y), (x+riser_height, y))
     if left:
-        line((x, y), (x, y+depth))
+        line((x, y), (x, y+riser_depth))
     if bottom:
-        line((x, y+depth), (x+riser_height, y+depth))
+        line((x, y+riser_depth), (x+riser_height, y+riser_depth))
     if right:
-        line((x+riser_height, y), (x+riser_height, y+depth))
+        line((x+riser_height, y), (x+riser_height, y+riser_depth))
     slot(x+128.63,y,top=False)
-
-if manufacturer  == "sculpteo":
-
-    shelf(0,0,top=False,left=False,right=False)
-    shelf(0,depth,top=False,left=False,right=False)
-    riser(0*riser_height,depth*2,top=False,bottom=False,left=False)
-    riser(1*riser_height,depth*2,top=False,bottom=False,left=False)
-    riser(2*riser_height,depth*2,top=False,bottom=False,left=False)
-
-elif manufacturer == "ponoko":
-    shelf(0,0,top=False,left=False,right=False)
-    riser(0*riser_height,depth*1,top=False,bottom=False,left=False)
-    riser(1*riser_height,depth*1,top=False,bottom=False,left=False)
-    riser(2*riser_height,depth*1,top=False,bottom=False,left=False,right=False)
-    line((0,depth*2),(shelf_width,2*depth))
-    line((0,0),(shelf_width,0))
-    line((shelf_width,0),(shelf_width,2*depth))
-    line((0,0),(0,2*depth))
-
+    if new_line:
+        return (0,y+riser_depth)
+    else:
+        return (x+riser_height,y)
     
 
-#dwg.add(dwg.line((0, 0), (10, 0), stroke=svgwrite.rgb(0, 0, 255),stroke_width="0.01"))
-#dwg.add(dwg.text('Test', insert=(0, 0.2), fill='red'))
-dwg.save()
 
 
+def main():
+
+    if panel == "ponoko_shelf_2_riser":
+    
+        color_width = 41
+        color_height = 96.475
+        panel_width = 791
+        panel_height = 384
+        shelf_width = 790
+        shelf_depth = 160
+        depth = 160
+        riser_height = 290
+        riser_depth = (384-depth)/2
+        
+
+        xy = (0,0)
+
+        xy = shelf(xy,shelf_width,shelf_depth,color_width,new_line=True)
+        xy = riser(xy,riser_height,riser_depth,top=False)
+        xy = riser(xy,riser_height,riser_depth,top=False,left=False)
+        xy = riser(xy,max_x-2*riser_height,riser_depth,top=False,left=False,new_line=True)
+        xy = riser(xy,riser_height,riser_depth,top=False)
+        xy = riser(xy,riser_height,riser_depth,top=False,left=False)
+        xy = riser(xy,max_x-2*riser_height,riser_depth,top=False,left=False,new_line=True)
+    
+    elif panel == "ponoko_short_shelf_2_riser":
+    
+        color_width = 41
+        color_height = 96.475
+        panel_width = 791
+        panel_height = 384
+        shelf_width = 790
+        shelf_depth = 160
+        depth = 160
+        riser_height = 290
+        riser_depth = (384-depth)/2
+        max_shelf = 316.65
+        
+
+        xy = (0,0)
+
+        xy = shelf(xy,316,shelf_depth,color_width,new_line=False)
+        xy = riser(xy,(max_x-316)/2,shelf_depth,left=False)
+        xy = riser(xy,(max_x-316)/2,shelf_depth,left=False,new_line=True)
+        xy = riser(xy,riser_height,riser_depth,top=False)
+        xy = riser(xy,riser_height,riser_depth,top=False,left=False)
+        xy = riser(xy,max_x-2*riser_height,riser_depth,top=False,left=False,new_line=True)
+        xy = riser(xy,riser_height,riser_depth,top=False)
+        xy = riser(xy,riser_height,riser_depth,top=False,left=False)
+        xy = riser(xy,max_x-2*riser_height,riser_depth,top=False,left=False,new_line=True)
+    
+    elif panel == "ponoko_all_riser":
+    
+        color_width = 41
+        color_height = 96.475
+        panel_width = 791
+        panel_height = 384
+        shelf_width = 790
+        shelf_depth = 160
+        depth = 160
+        riser_height = 290
+        riser_depth = (384)/3
+        max_shelf = 316.65
+        
+
+        xy = (0,0)
+
+        xy = riser(xy,riser_height,riser_depth)
+        xy = riser(xy,riser_height,riser_depth,left=False)
+        xy = riser(xy,max_x-2*riser_height,riser_depth,left=False,new_line=True)
+        xy = riser(xy,riser_height,riser_depth,top=False)
+        xy = riser(xy,riser_height,riser_depth,top=False,left=False)
+        xy = riser(xy,max_x-2*riser_height,riser_depth,top=False,left=False,new_line=True)
+        xy = riser(xy,riser_height,riser_depth,top=False)
+        xy = riser(xy,riser_height,riser_depth,top=False,left=False)
+        xy = riser(xy,max_x-2*riser_height,riser_depth,top=False,left=False,new_line=True)
+    
+
+    #dwg.add(dwg.line((0, 0), (10, 0), stroke=svgwrite.rgb(0, 0, 255),stroke_width="0.01"))
+    #dwg.add(dwg.text('Test', insert=(0, 0.2), fill='red'))
+    dwg.save()
+    
+
+
+if __name__ == "__main__":
+    main()
